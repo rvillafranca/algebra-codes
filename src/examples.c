@@ -33,7 +33,7 @@ int main()
     // Call weight distribution exhaustive calculator
     start = clock();
     // wd = wdp(p, n, k, code1, nullvec12, 0);
-    wd = para_wdp(p, n, k, code1, 0);
+    wd = para_wd(p, 1, n, k, code1, 0);
     end = clock();
     if (wd == NULL)
         exit(EXIT_FAILURE);
@@ -55,7 +55,7 @@ int main()
            (double)(end - start) / CLOCKS_PER_SEC);
 
     // Free memory allocated for results
-    free(wd);
+    free_memory();
 
 
     // EX 2: Code over finite field extension ==> use "wde"
@@ -84,8 +84,8 @@ int main()
 
     // Starting vector (unless dividing code for parallel processing,
     // this should be the null vector of appropriate size)
-    int nullvec28[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    // int nullvec28[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    //                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     // Parameters
     p = 2;      // Field characteristic
@@ -95,7 +95,8 @@ int main()
 
     // Call weight distribution exhaustive calculator
     start = clock();
-    wd = wde(p, e, n, k, code2, nullvec28, 0);
+    // wd = wde(p, e, n, k, code2, nullvec28, 0);
+    wd = para_wd(p, e, n, k, code2, 0);
     end = clock();
     if (wd == NULL)
         exit(EXIT_FAILURE);
@@ -126,5 +127,5 @@ int main()
            (double)(end - start) / CLOCKS_PER_SEC);
 
     // Free memory allocated for results
-    free(wd);
+    free_memory();
 }

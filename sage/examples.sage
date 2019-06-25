@@ -1,7 +1,10 @@
 #!/usr/bin/env sage
 # Encoding: utf-8
 
+from time import time
+
 load('weightdistr.sage')
+
 
 # Example 1 --------------------------------------------------------------------
 
@@ -28,6 +31,7 @@ for w in range(n + 1):
     if (wd[0][w] != 0):
         print('\t{:5}   {:6}'.format(w, wd[0][w]))
 print('\n\n{} words computed\n'.format(wd[2]))
+
 
 # Example 2 --------------------------------------------------------------------
 
@@ -74,3 +78,54 @@ for w in range(n * d + 1):
 
 # wd[2] has the total number of computed words
 print('\n\n{} words computed\n'.format(wd[2]))
+
+
+# Example 3 (a bigger one) -----------------------------------------------------
+
+# Group algebra of C14 over GF(7)
+q = 7
+# d = 1       # Degree of field extension
+n = 14
+K.<z> = GF(q)
+G.<ag> = AbelianGroup([n])
+KG = GroupAlgebra(G, K)
+
+a = KG(ag^2)    # Generator of subgroup of order 7
+g = KG(ag^7)    # Generator of subgroup of order 2
+
+# Idempotents of KG
+e1 = 4 + 3*g
+e2 = 4 + 4*g
+
+# Cyclic code of length 14 over GF(7)
+basis = [(a - 1)^k * e1 for k in range(2, 7)]
+basis += [(a - 1)^k * e2 for k in range(1, 7)]
+
+# Compute the weight distribution
+B = [tuple(b.coefficient(ag^k) for k in range(n)) for b in basis]
+print('\n\nComputing a bigger one...')
+start = time()
+wd = weightdist(q, n, B)
+end = time()
+
+# Format elapsed time
+min, sec = divmod(int(end - start), 60)
+if (min > 0):
+    hour, min = divmod(min, 60)
+    if (hour > 0):
+        elapsed = '{}h {}min {}s'.format(hour, min, sec)
+    else:
+        elapsed = '{}min {}s'.format(min, sec)
+else:
+    elapsed = '{}s'.format(sec)
+
+# wd[0] has the weight distribution of the code seen as over K
+print('\nWeight distribution:\n\n'
+      '\tWeight   # words\n'
+      '\t------  ---------')
+for w in range(n + 1):
+    if (wd[0][w] != 0):
+        print('\t{:5}  {:9}'.format(w, wd[0][w]))
+
+# wd[2] has the total number of computed words
+print('\n\n{} words computed in {}\n'.format(wd[2], elapsed))

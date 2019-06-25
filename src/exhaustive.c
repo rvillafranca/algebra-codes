@@ -186,9 +186,10 @@ long *wde(int p, int e, int n, int k, int *B, int *c0, int min)
     return distr;
 }
 
+
 /******************************************************************************
 
-    ...
+    Free memory allocated for results by wdp, wde or para_wd.
 
 ******************************************************************************/
 void free_memory()
@@ -202,35 +203,47 @@ void free_memory()
 
 /******************************************************************************
 
-    Weight distribution over prime finite fields (parallel processing)
+    Weight distribution over finite fields (parallel processing)
 
     Parameters:
       p     field characteristic;
-      n     code length;
-      k     code dimension;
+      e     extension degree;
+      n     code length (as seen over the prime field GF(p));
+      k     code dimension (as seen over the prime field GF(p));
       B     base of the code / generator matrix:
-            base vectors (matrix rows) must be concatenated as a single
-            vector of length n*k;
+            - base vectors (matrix rows) must be concatenated as a single
+              vector of length n*k;
+            - each coefficient in GF(p^e) should be split into e consecutive
+              coefficients in GF(p);
       min   stop criterium:
             if this parameter is positive the execution is interrupted
             if a word of weight less than its value is found.
 
     Return:
+    If e == 1:
       a vector "distr" of length n+2:
       - for 0 <= i <= n, distr[i] contains the number of codewords of
         weight i found;
       - distr[n+1] contains the total number of codewords computed.
-
+    If e > 1:
+      a vector "distr" of length n/e + n + 3:
+      - for 0 <= i <= n/e, distr[i] contains the number of codewords of
+        weight i found, as seen over GF(p^e);
+      - for 0 <= i <= n, distr[n/e + 1 + i] contains the number of codewords of
+        weight i found, as seen over GF(p);
+      - distr[n/e + n + 2] contains the total number of codewords computed.
 
 ******************************************************************************/
-long *para_wdp(int p, int n, int k, int *B, int min)
+long *para_wd(int p, int e, int n, int k, int *B, int min)
 {
     pid_t pid;
-    int a, *c0;
+    int a, *c0, N;
     long *partial_wd, *aux;
 
+    N = (e == 1) ? (n + 1) : (n / e + n + 2);
+
     // Auxiliary memory shared by processes
-    aux = (long*)mmap(NULL, (n + 2) * sizeof(long), PROT_READ | PROT_WRITE,
+    aux = (long*)mmap(NULL, (N + 1) * sizeof(long), PROT_READ | PROT_WRITE,
                       MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     c0 = (int*)malloc(n * sizeof(int));
@@ -239,8 +252,11 @@ long *para_wdp(int p, int n, int k, int *B, int min)
         if (pid == 0) {
             for (int i = 0; i < n; i++)
                 c0[i] = B[i] * a;
-            partial_wd = wdp(p, n, k - 1, &B[n], c0, min);
-            for (int w = 0; w <= n + 1; w++)
+            if (e == 1)
+                partial_wd = wdp(p, n, k - 1, &B[n], c0, min);
+            else
+                partial_wd = wde(p, e, n, k - 1, &B[n], c0, min);
+            for (int w = 0; w <= N; w++)
                 aux[w] += partial_wd[w];
             free(partial_wd);
             exit(EXIT_SUCCESS);
@@ -251,18 +267,18 @@ long *para_wdp(int p, int n, int k, int *B, int min)
     while (wait(NULL) > 0);
 
     // Copy shared memory to new allocated vector
-    distr = (long*)calloc((n + 2), sizeof(long));
-    for (int w = 0; w <= n + 1; w++)
+    distr = (long*)calloc(N + 1, sizeof(long));
+    for (int w = 0; w <= N; w++)
         distr[w] = aux[w];
 
     // Release shared memory
-    munmap(aux, (n + 2) * sizeof(long));
+    munmap(aux, (N + 1) * sizeof(long));
 
     return distr;
 }
 
+
 /* TODO:
-    para_wde;
     interprocess communication for 'min';
     Galois rings routines;
 */
