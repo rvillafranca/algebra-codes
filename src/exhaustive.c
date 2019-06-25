@@ -1,6 +1,10 @@
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-int *distr = NULL;      // Weight distributions, used as return from the
+long *distr = NULL;     // Weight distributions, used as return from the
                         // functions "wdp" and "wde". Should be freed after
                         // used.
 
@@ -28,28 +32,22 @@ int *distr = NULL;      // Weight distributions, used as return from the
 
 
 ******************************************************************************/
-int *wdp(int p, int n, int k, int *B, int *c0, int min)
+long *wdp(int p, int n, int k, int *B, int *c0, int min)
 {
     int *c, *a, *s;
     int i, j, w;
 
     // Weight distribution and number of words computed
-    distr = (int*)malloc((n + 2) * sizeof(int));
-    for (j = 0; j <= n + 1; j++)
-        distr[j] = 0;
+    distr = (long*)calloc(n + 2, sizeof(long));
 
     // Codewords computed
     c = (int*)malloc(n * sizeof(int));
-    for (j = 0; j < n; j++)
-        c[j] = c0[j];
+    for (i = 0; i < n; i++)
+        c[i] = c0[i];
 
     // Coefficient and upward/downward vectors
-    a = (int*)malloc(k * sizeof(int));
-    s = (int*)malloc(k * sizeof(int));
-    for (j = 0; j < k; j++) {
-        a[j] = 0;
-        s[j] = 0;
-    }
+    a = (int*)calloc(k, sizeof(int));
+    s = (int*)calloc(k, sizeof(int));
 
     i = 0;
     while (i < k) {
@@ -76,7 +74,7 @@ int *wdp(int p, int n, int k, int *B, int *c0, int min)
                     c[j] = (c[j] + B[i * n + j]);
                 i = 0;
                 break;
-            }else  {
+            }else {
                 s[i] = !s[i];
                 i++;
             }
@@ -120,7 +118,7 @@ int *wdp(int p, int n, int k, int *B, int *c0, int min)
 
 
 ******************************************************************************/
-int *wde(int p, int e, int n, int k, int *B, int *c0, int min)
+long *wde(int p, int e, int n, int k, int *B, int *c0, int min)
 {
     int *c, *a, *s;
     int i, j, wp, we, z, ne;
@@ -130,22 +128,16 @@ int *wde(int p, int e, int n, int k, int *B, int *c0, int min)
     ne = n / e;
 
     // Weight distribution and number of words computed
-    distr = (int*)malloc((ne + n + 3) * sizeof(int));
-    for (j = 0; j <= ne + n + 2; j++)
-        distr[j] = 0;
+    distr = (long*)calloc((ne + n + 3), sizeof(long));
 
     // Codewords computed
     c = (int*)malloc(n * sizeof(int));
-    for (j = 0; j < n; j++)
-        c[j] = c0[j];
+    for (i = 0; i < n; i++)
+        c[i] = c0[i];
 
     // Coefficient and upward/downward vectors
-    a = (int*)malloc(k * sizeof(int));
-    s = (int*)malloc(k * sizeof(int));
-    for (j = 0; j < k; j++) {
-        a[j] = 0;
-        s[j] = 0;
-    }
+    a = (int*)calloc(k, sizeof(int));
+    s = (int*)calloc(k, sizeof(int));
 
     i = 0;
     while (i < k) {
@@ -174,13 +166,13 @@ int *wde(int p, int e, int n, int k, int *B, int *c0, int min)
                     c[j] = (c[j] - B[i * n + j]);
                 i = 0;
                 break;
-            }else if (!s[i] && a[i] < (p - 1)) {
+            } else if (!s[i] && a[i] < (p - 1)) {
                 a[i]++;
                 for (j = 0; j < n; j++)
                     c[j] = (c[j] + B[i * n + j]);
                 i = 0;
                 break;
-            }else  {
+            } else {
                 s[i] = !s[i];
                 i++;
             }
@@ -194,4 +186,83 @@ int *wde(int p, int e, int n, int k, int *B, int *c0, int min)
     return distr;
 }
 
-// TODO: Rewrite 'free_memory" ==> to be called from sage routines
+/******************************************************************************
+
+    ...
+
+******************************************************************************/
+void free_memory()
+{
+    if (distr != NULL) {
+        free(distr);
+        distr = NULL;
+    }
+}
+
+
+/******************************************************************************
+
+    Weight distribution over prime finite fields (parallel processing)
+
+    Parameters:
+      p     field characteristic;
+      n     code length;
+      k     code dimension;
+      B     base of the code / generator matrix:
+            base vectors (matrix rows) must be concatenated as a single
+            vector of length n*k;
+      min   stop criterium:
+            if this parameter is positive the execution is interrupted
+            if a word of weight less than its value is found.
+
+    Return:
+      a vector "distr" of length n+2:
+      - for 0 <= i <= n, distr[i] contains the number of codewords of
+        weight i found;
+      - distr[n+1] contains the total number of codewords computed.
+
+
+******************************************************************************/
+long *para_wdp(int p, int n, int k, int *B, int min)
+{
+    pid_t pid;
+    int a, *c0;
+    long *partial_wd, *aux;
+
+    // Auxiliary memory shared by processes
+    aux = (long*)mmap(NULL, (n + 2) * sizeof(long), PROT_READ | PROT_WRITE,
+                      MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+    c0 = (int*)malloc(n * sizeof(int));
+    for (a = 0; a < p; a++) {
+        pid = fork();
+        if (pid == 0) {
+            for (int i = 0; i < n; i++)
+                c0[i] = B[i] * a;
+            partial_wd = wdp(p, n, k - 1, &B[n], c0, min);
+            for (int w = 0; w <= n + 1; w++)
+                aux[w] += partial_wd[w];
+            free(partial_wd);
+            exit(EXIT_SUCCESS);
+        }
+    }
+
+    // Wait for children to finish their computation
+    while (wait(NULL) > 0);
+
+    // Copy shared memory to new allocated vector
+    distr = (long*)calloc((n + 2), sizeof(long));
+    for (int w = 0; w <= n + 1; w++)
+        distr[w] = aux[w];
+
+    // Release shared memory
+    munmap(aux, (n + 2) * sizeof(long));
+
+    return distr;
+}
+
+/* TODO:
+    para_wde;
+    interprocess communication for 'min';
+    Galois rings routines;
+*/

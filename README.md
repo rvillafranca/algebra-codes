@@ -42,11 +42,9 @@ will build an executable binary that can be run in a terminal.
 > http://www.sagemath.org/download-windows.html). It is based on Cygwin and
 > comes with `gcc`. Among other ways, a UNIX-like environment can be accessed
 > via Python's `os` package. To build the shared library, for example, one can
-> do, from the folder where the `Makefile` is.
+> do, from the folder where the `Makefile` is:
 >
 > ```python
 > import os
 > os.system("make shared")
 > ```
-
-TODO: Force 64 bits integers on C programs. Parallelize Sage routines.

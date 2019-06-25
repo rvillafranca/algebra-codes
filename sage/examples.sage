@@ -22,12 +22,12 @@ B = [[K(x) for x in v] for v in G]      # Convert G to a K-basis
 wd = weightdist(p, n, B)
 
 print('Distribuição de pesos:\n\n'
-      '\tPeso  # palavras\n'
-      '\t----  ----------')
+      '\tWeight  # words\n'
+      '\t------  -------')
 for w in range(n + 1):
     if (wd[0][w] != 0):
-        print('\t{:3}   {:8}'.format(w, wd[0][w]))
-
+        print('\t{:5}   {:6}'.format(w, wd[0][w]))
+print('\n\n{} words computed\n'.format(wd[2]))
 
 # Example 2 --------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ print('\n\nWeight distribution over GF(4):\n\n'
       '\t------  -------')
 for w in range(n + 1):
     if (wd[0][w] != 0):
-        print('\t{:5}   {:5}'.format(w, wd[0][w]))
+        print('\t{:5}   {:6}'.format(w, wd[0][w]))
 
 # If K is not a prime field, wd[1] has the weight distribution of the code seen
 # as over the prime field of K
@@ -70,7 +70,7 @@ print('\n\nWeight distribution over GF(2):\n\n'
       '\t------  -------')
 for w in range(n * d + 1):
     if (wd[1][w] != 0):
-        print('\t{:5}   {:5}'.format(w, wd[1][w]))
+        print('\t{:5}   {:6}'.format(w, wd[1][w]))
 
 # wd[2] has the total number of computed words
 print('\n\n{} words computed\n'.format(wd[2]))

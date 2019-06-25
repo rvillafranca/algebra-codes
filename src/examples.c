@@ -5,7 +5,7 @@
 
 int main()
 {
-    int *wd;                // Pointer to results
+    long *wd;               // Pointer to results
     clock_t start, end;     // Elapsed time measuring
 
     // EX 1: Code over prime finite field ==> use "wdp"
@@ -23,7 +23,7 @@ int main()
 
     // Starting vector (unless dividing code for parallel processing,
     // this should be the null vector of appropriate size)
-    int nullvec12[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    // int nullvec12[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     // Parameters
     int p = 3;      // Field characteristic
@@ -32,7 +32,8 @@ int main()
 
     // Call weight distribution exhaustive calculator
     start = clock();
-    wd = wdp(p, n, k, code1, nullvec12, 0);
+    // wd = wdp(p, n, k, code1, nullvec12, 0);
+    wd = para_wdp(p, n, k, code1, 0);
     end = clock();
     if (wd == NULL)
         exit(EXIT_FAILURE);
@@ -48,7 +49,7 @@ int main()
     printf("\tweight   # of words\n\t------   ----------\n");
     for (int w = 0; w <= n; w++)
         if (wd[w] != 0)
-            printf("\t  %2d        %4d\n", w, wd[w]);
+            printf("\t  %2d        %4ld\n", w, wd[w]);
     printf("\t-------------------\n");
     printf("(%d words computed in %.3lfs)\n\n", wd[n + 1],
            (double)(end - start) / CLOCKS_PER_SEC);
@@ -110,14 +111,14 @@ int main()
     printf("\tweight   # of words\n\t------   ----------\n");
     for (int w = 0; w <= n / e; w++)
         if (wd[w] != 0)
-            printf("\t  %2d        %5d\n", w, wd[w]);
+            printf("\t  %2d        %5ld\n", w, wd[w]);
     printf("\t-------------------\n\n");
 
     printf("Seen as a code over GF(2), it has the following weight distribution:\n\n");
     printf("\tweight   # of words\n\t------   ----------\n");
     for (int w = 0; w <= n; w++)
         if (wd[n / e + 1 + w] != 0)
-            printf("\t  %2d        %5d\n", w, wd[n / e + 1 + w]);
+            printf("\t  %2d        %5ld\n", w, wd[n / e + 1 + w]);
     printf("\t-------------------\n");
 
 
