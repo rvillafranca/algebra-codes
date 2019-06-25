@@ -48,5 +48,3 @@ will build an executable binary that can be run in a terminal.
 > import os
 > os.system("make shared")
 > ```
-
-TODO: Force 64 bits integers on C programs. Parallelize Sage routines.

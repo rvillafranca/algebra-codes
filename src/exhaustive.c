@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-int *distr = NULL;      // Weight distributions, used as return from the
+long *distr = NULL;      // Weight distributions, used as return from the
                         // functions "wdp" and "wde". Should be freed after
                         // used.
 
@@ -28,15 +28,13 @@ int *distr = NULL;      // Weight distributions, used as return from the
 
 
 ******************************************************************************/
-int *wdp(int p, int n, int k, int *B, int *c0, int min)
+long *wdp(int p, int n, int k, int *B, int *c0, int min)
 {
     int *c, *a, *s;
     int i, j, w;
 
     // Weight distribution and number of words computed
-    distr = (int*)malloc((n + 2) * sizeof(int));
-    for (j = 0; j <= n + 1; j++)
-        distr[j] = 0;
+    distr = (long*)calloc(n + 2, sizeof(long));
 
     // Codewords computed
     c = (int*)malloc(n * sizeof(int));
@@ -44,12 +42,8 @@ int *wdp(int p, int n, int k, int *B, int *c0, int min)
         c[j] = c0[j];
 
     // Coefficient and upward/downward vectors
-    a = (int*)malloc(k * sizeof(int));
-    s = (int*)malloc(k * sizeof(int));
-    for (j = 0; j < k; j++) {
-        a[j] = 0;
-        s[j] = 0;
-    }
+    a = (int*)calloc(k, sizeof(int));
+    s = (int*)calloc(k, sizeof(int));
 
     i = 0;
     while (i < k) {
@@ -120,7 +114,7 @@ int *wdp(int p, int n, int k, int *B, int *c0, int min)
 
 
 ******************************************************************************/
-int *wde(int p, int e, int n, int k, int *B, int *c0, int min)
+long *wde(int p, int e, int n, int k, int *B, int *c0, int min)
 {
     int *c, *a, *s;
     int i, j, wp, we, z, ne;
@@ -130,9 +124,7 @@ int *wde(int p, int e, int n, int k, int *B, int *c0, int min)
     ne = n / e;
 
     // Weight distribution and number of words computed
-    distr = (int*)malloc((ne + n + 3) * sizeof(int));
-    for (j = 0; j <= ne + n + 2; j++)
-        distr[j] = 0;
+    distr = (long*)calloc(ne + n + 3, sizeof(long));
 
     // Codewords computed
     c = (int*)malloc(n * sizeof(int));
@@ -140,12 +132,8 @@ int *wde(int p, int e, int n, int k, int *B, int *c0, int min)
         c[j] = c0[j];
 
     // Coefficient and upward/downward vectors
-    a = (int*)malloc(k * sizeof(int));
-    s = (int*)malloc(k * sizeof(int));
-    for (j = 0; j < k; j++) {
-        a[j] = 0;
-        s[j] = 0;
-    }
+    a = (int*)calloc(k, sizeof(int));
+    s = (int*)calloc(k, sizeof(int));
 
     i = 0;
     while (i < k) {
