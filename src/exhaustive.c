@@ -1,8 +1,11 @@
+#include <signal.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <sys/mman.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#define EXIT_MINSTOP    3
 
 long *distr = NULL;     // Weight distributions, used as return from the
                         // functions "wdp" and "wde". Should be freed after
@@ -203,6 +206,17 @@ void free_memory()
 
 /******************************************************************************
 
+    Used to stop computation if a process reaches the 'min' stop criterium.
+
+******************************************************************************/
+void sigminstop(int signo)
+{
+    exit(EXIT_MINSTOP);
+}
+
+
+/******************************************************************************
+
     Weight distribution over finite fields (parallel processing)
 
     Parameters:
@@ -236,35 +250,66 @@ void free_memory()
 ******************************************************************************/
 long *para_wd(int p, int e, int n, int k, int *B, int min)
 {
-    pid_t pid;
-    int a, *c0, N;
+    pid_t pid, *children = NULL;
+    int a, *c0, N, w, status;
     long *partial_wd, *aux;
 
+    // 'distr' vector size
     N = (e == 1) ? (n + 1) : (n / e + n + 2);
 
     // Auxiliary memory shared by processes
     aux = (long*)mmap(NULL, (N + 1) * sizeof(long), PROT_READ | PROT_WRITE,
                       MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
+    // Split the code in cosets handled by children processes
     c0 = (int*)malloc(n * sizeof(int));
     for (a = 0; a < p; a++) {
         pid = fork();
+        // Child process: handle an individual coset
         if (pid == 0) {
+            status = EXIT_SUCCESS;
+            signal(SIGINT, sigminstop);
             for (int i = 0; i < n; i++)
                 c0[i] = B[i] * a;
             if (e == 1)
                 partial_wd = wdp(p, n, k - 1, &B[n], c0, min);
             else
                 partial_wd = wde(p, e, n, k - 1, &B[n], c0, min);
-            for (int w = 0; w <= N; w++)
+            for (int w = 0; w <= N; w++) {
                 aux[w] += partial_wd[w];
+                if (w > 0 && w < min && aux[w] > 0)
+                    status = EXIT_MINSTOP;
+            }
             free(partial_wd);
-            exit(EXIT_SUCCESS);
+            exit(status);
+        }
+        // Parent process: register children
+        else {
+            if (children == NULL)
+                children = (pid_t*)calloc(p, sizeof(pid_t));
+            children[a] = pid;
         }
     }
 
     // Wait for children to finish their computation
-    while (wait(NULL) > 0);
+    while ((pid = wait(&status)) > 0) {
+        // Locate PID among children
+        a = 0;
+        while (a < p && children[a] != pid)
+            a++;
+
+        // Child reached 'min' stop criterium, signal siblings to stop
+        if (WEXITSTATUS(status) == EXIT_MINSTOP) {
+            for (int i = 0; i < p; i++) {
+                if (i != a && children[i] > 0) {
+                    kill(children[i], SIGINT);
+                    children[i] = 0;
+                }
+            }
+        }
+        children[a] = 0;        // Unregister child
+    }
+    free(children);
 
     // Copy shared memory to new allocated vector
     distr = (long*)calloc(N + 1, sizeof(long));
@@ -279,6 +324,5 @@ long *para_wd(int p, int e, int n, int k, int *B, int min)
 
 
 /* TODO:
-    interprocess communication for 'min';
     Galois rings routines;
-*/
+ */

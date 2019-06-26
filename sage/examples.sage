@@ -105,7 +105,7 @@ basis += [(a - 1)^k * e2 for k in range(1, 7)]
 B = [tuple(b.coefficient(ag^k) for k in range(n)) for b in basis]
 print('\n\nComputing a bigger one...')
 start = time()
-wd = weightdist(q, n, B)
+wd = weightdist(q, n, B, minstop=4)
 end = time()
 
 # Format elapsed time
@@ -125,7 +125,7 @@ print('\nWeight distribution:\n\n'
       '\t------  ---------')
 for w in range(n + 1):
     if (wd[0][w] != 0):
-        print('\t{:5}  {:9}'.format(w, wd[0][w]))
+        print('\t{:5}  {:10}'.format(w, wd[0][w]))
 
 # wd[2] has the total number of computed words
 print('\n\n{} words computed in {}\n'.format(wd[2], elapsed))
